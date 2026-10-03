@@ -9,7 +9,7 @@ Copy `.env.example` to `.env` for local development. Never commit `.env`.
 | --- | --- |
 | `APP_ENV` | `development` / `staging` / `production` |
 | `LOG_LEVEL` | Structured log level |
-| `DATABASE_URL` | Async SQLAlchemy PostgreSQL URL |
+| `DATABASE_URL` | Async SQLAlchemy PostgreSQL URL (Compose publishes Postgres on host port `15432`) |
 | `REDIS_URL` | Redis connection URL |
 
 ## Required for dashboard analysis

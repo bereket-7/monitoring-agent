@@ -27,3 +27,7 @@
 - `docs/22_DEFINITION_OF_DONE.md` — completion checklist
 - `docs/23_FIRST_MVP.md` — tightly scoped MVP
 - `docs/24_FUTURE_ROADMAP.md` — post-MVP roadmap
+- `docs/25_MVP_BOUNDARIES.md` — locked MVP in/out scope (Phase 0)
+- `docs/26_CODING_STANDARDS.md` — coding standards (Phase 0)
+- `docs/27_ENVIRONMENT_CONTRACT.md` — environment variable contract (Phase 0)
+- `docs/28_PHASE_STATUS.md` — current implementation phase status

@@ -49,6 +49,12 @@ Health probes:
 - `GET /health` — liveness
 - `GET /ready` — readiness (PostgreSQL)
 
+Dashboards (Phase 2):
+
+- `GET /api/v1/dashboards`
+- `GET /api/v1/dashboards/{uid}`
+- `POST /api/v1/dashboards/{uid}/sync` (requires `GRAFANA_URL` / `GRAFANA_API_TOKEN`)
+
 Validate:
 
 ```bash

@@ -8,6 +8,9 @@ from typing import Any, Protocol
 import httpx
 
 from app.config import Settings, get_settings
+from app.observability.metrics import observe_llm_request
+from app.observability.tracing import get_tracer
+from app.security.redaction import redact_object
 
 
 class LLMError(Exception):
@@ -90,38 +93,54 @@ class LLMClient:
         if api_key is None or not api_key.get_secret_value():
             raise LLMConfigError("OPENAI_API_KEY is not configured")
 
+        # Redact secrets/PII from untrusted monitoring content before LLM submission.
+        safe_messages = redact_object(
+            messages,
+            redact_emails=self._settings.redact_emails,
+        )
+        if not isinstance(safe_messages, list):
+            raise LLMRequestError("Failed to prepare redacted LLM messages")
+
         payload: dict[str, Any] = {
             "model": self._settings.openai_model,
-            "messages": messages,
+            "messages": safe_messages,
             "temperature": 0,
         }
         if tools:
             payload["tools"] = tools
             payload["tool_choice"] = "auto"
 
-        try:
-            response = await self._client.post(
-                "/chat/completions",
-                headers={
-                    "Authorization": f"Bearer {api_key.get_secret_value()}",
-                    "Content-Type": "application/json",
-                },
-                json=payload,
-            )
-        except httpx.TimeoutException as exc:
-            raise LLMRequestError("LLM request timed out") from exc
-        except httpx.HTTPError as exc:
-            raise LLMRequestError(f"LLM transport error: {exc}") from exc
+        tracer = get_tracer("app.clients.llm")
+        with tracer.start_as_current_span("llm.complete") as span:
+            span.set_attribute("llm.model", self._settings.openai_model)
+            try:
+                response = await self._client.post(
+                    "/chat/completions",
+                    headers={
+                        "Authorization": f"Bearer {api_key.get_secret_value()}",
+                        "Content-Type": "application/json",
+                    },
+                    json=payload,
+                )
+            except httpx.TimeoutException as exc:
+                observe_llm_request(status="error")
+                raise LLMRequestError("LLM request timed out") from exc
+            except httpx.HTTPError as exc:
+                observe_llm_request(status="error")
+                raise LLMRequestError(f"LLM transport error: {exc}") from exc
 
-        if response.status_code >= 400:
-            raise LLMRequestError(
-                f"LLM API error {response.status_code}: {response.text[:500]}"
-            )
+            if response.status_code >= 400:
+                observe_llm_request(status="error")
+                raise LLMRequestError(
+                    f"LLM API error {response.status_code}: {response.text[:500]}"
+                )
 
-        data = response.json()
-        if not isinstance(data, dict):
-            raise LLMRequestError("LLM response was not a JSON object")
-        return self._parse_response(data)
+            data = response.json()
+            if not isinstance(data, dict):
+                observe_llm_request(status="error")
+                raise LLMRequestError("LLM response was not a JSON object")
+            observe_llm_request(status="success")
+            return self._parse_response(data)
 
     def _parse_response(self, data: dict[str, Any]) -> LLMResponse:
         choices = data.get("choices")

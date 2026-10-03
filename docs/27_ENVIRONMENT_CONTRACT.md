@@ -44,6 +44,14 @@ Copy `.env.example` to `.env` for local development. Never commit `.env`.
 | `MAX_QUERY_LENGTH` | Reject oversized queries |
 | `MAX_TIME_RANGE_SECONDS` | Reject excessive ranges |
 | `QUERY_CONCURRENCY_LIMIT` | Cap concurrent external queries |
+| `API_AUTH_ENABLED` | Force API key auth; default true in production |
+| `API_KEYS` | Comma-separated API keys (required in production) |
+| `RATE_LIMIT_REQUESTS_PER_MINUTE` | Per-identity request budget (0 disables) |
+| `REDACT_EMAILS` | Redact emails before LLM/audit |
+| `REQUIRE_READONLY_CREDENTIALS` | Emit startup posture that tokens must be read-only |
+| `OTEL_ENABLED` | Enable OpenTelemetry tracing |
+| `OTEL_SERVICE_NAME` | Trace service name |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | OTLP HTTP traces endpoint |
 
 ## Secrets policy
 
@@ -52,4 +60,4 @@ Copy `.env.example` to `.env` for local development. Never commit `.env`.
 - Never put secrets in prompts, logs, or API responses
 - Prefer read-only Grafana/Prometheus/Loki credentials
 
-See also: `docs/16_SECURITY.md`, `docs/18_DEPLOYMENT.md`, `.env.example`.
+See also: `docs/16_SECURITY.md`, `docs/18_DEPLOYMENT.md`, `docs/29_PRODUCTION_SECURITY_REVIEW.md`, `.env.example`.

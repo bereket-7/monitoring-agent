@@ -65,6 +65,15 @@ Deterministic validation (Phase 4):
 - Rules: `SR-001`, `ER-001`, `CONS-001/002/003`, `LAT-001`, `RATE-001`
 - Engine: `app.validators.ValidationEngine` (no LLM)
 
+Dashboard analysis (Phase 5–6):
+
+- `GET /api/v1/analysis/dashboards/{uid}` — query inventory, variable graph, duplicates, filter intelligence, static findings
+
+Agent chat (Phase 7):
+
+- `POST /api/v1/agent/chat` — read-only tool-calling investigation (`OPENAI_API_KEY` required for live LLM)
+- Evidence and confidence are grounded in successful tool results only
+
 Validate:
 
 ```bash

@@ -2,24 +2,24 @@
 
 ## Current phase
 
-**Phase 3 — Prometheus/Loki: COMPLETE**
+**Phase 4 — Validation engine: COMPLETE**
 
 Previous:
 - Phase 0 — Specification: COMPLETE
 - Phase 1 — Scaffold: COMPLETE
 - Phase 2 — Grafana integration: COMPLETE
+- Phase 3 — Prometheus/Loki: COMPLETE (12 commits ready to push)
 
-Next: **Phase 4 — Validation engine**
+Next: **Phase 5 — Dashboard analyzer**
 
-## Phase 3 acceptance
+## Phase 4 acceptance
 
-- [x] Typed read-only Prometheus client (instant/range/metadata/labels/series)
-- [x] Typed read-only Loki client (instant/range/labels; graceful when unset)
-- [x] Query/response models in `app.schemas.query`
-- [x] Timeouts, retries, response size limits, query length limits
-- [x] Typed failure mapping (`PrometheusQueryError`, `LokiUnavailableError`, etc.)
-- [x] Unit tests with mocked HTTP
-- [x] Lint / typecheck / tests green (27 tests)
+- [x] Validator protocol + `ValidationEngine`
+- [x] SR-001, ER-001, CONS-001/002/003, LAT-001, RATE-001
+- [x] Missing telemetry not treated as zero
+- [x] Error semantics must be configured explicitly
+- [x] Golden tests for correct/incorrect cases
+- [x] Lint / typecheck / tests green (40 tests)
 
 ## Validation
 

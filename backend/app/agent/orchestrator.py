@@ -19,7 +19,10 @@ from app.clients.loki import LokiClient
 from app.clients.prometheus import PrometheusClient
 from app.config import Settings, get_settings
 from app.logging import get_logger
+from app.observability.metrics import observe_agent_request, observe_tool_call
+from app.observability.tracing import get_tracer
 from app.schemas.agent import AgentChatRequest, AgentChatResponse
+from app.security.audit import emit_audit_event
 
 logger = get_logger(__name__)
 
@@ -46,7 +49,13 @@ class AgentOrchestrator:
         self._settings = settings or get_settings()
         self._registry = registry or ToolRegistry()
 
-    async def run(self, request: AgentChatRequest) -> AgentChatResponse:
+    async def run(
+        self,
+        request: AgentChatRequest,
+        *,
+        request_id: str | None = None,
+        user_identity: str | None = None,
+    ) -> AgentChatResponse:
         started = time.monotonic()
         state = self._initial_state(request)
         tool_context = ToolContext(
@@ -56,55 +65,75 @@ class AgentOrchestrator:
             grafana=self._grafana,
             settings=self._settings,
         )
+        tracer = get_tracer("app.agent.orchestrator")
 
         try:
-            while state.final_answer is None:
-                if time.monotonic() - started > self._settings.agent_max_analysis_seconds:
-                    state.stopped_reason = "timeout"
-                    state.limitations.append("Analysis time budget exceeded.")
-                    break
-                if state.remaining_budget <= 0:
-                    state.stopped_reason = "budget_exhausted"
-                    state.limitations.append("Tool-call budget exhausted.")
-                    break
+            with tracer.start_as_current_span("agent.run") as span:
+                span.set_attribute("agent.dashboard_uid", request.dashboard_uid or "")
+                while state.final_answer is None:
+                    if time.monotonic() - started > self._settings.agent_max_analysis_seconds:
+                        state.stopped_reason = "timeout"
+                        state.limitations.append("Analysis time budget exceeded.")
+                        break
+                    if state.remaining_budget <= 0:
+                        state.stopped_reason = "budget_exhausted"
+                        state.limitations.append("Tool-call budget exhausted.")
+                        break
 
-                try:
-                    llm_response = await self._llm.complete(
-                        state.messages,
-                        self._registry.list_openai_tools(),
-                    )
-                except LLMConfigError as exc:
-                    state.stopped_reason = "llm_not_configured"
-                    state.limitations.append(str(exc))
-                    state.final_answer = (
-                        "The LLM provider is not configured. "
-                        "Set OPENAI_API_KEY to enable agent chat."
-                    )
-                    break
-                except LLMError as exc:
-                    state.stopped_reason = "llm_error"
-                    state.limitations.append(str(exc))
-                    state.final_answer = (
-                        "The language model request failed before investigation could continue."
-                    )
-                    break
+                    try:
+                        llm_response = await self._llm.complete(
+                            state.messages,
+                            self._registry.list_openai_tools(),
+                        )
+                    except LLMConfigError as exc:
+                        state.stopped_reason = "llm_not_configured"
+                        state.limitations.append(str(exc))
+                        state.final_answer = (
+                            "The LLM provider is not configured. "
+                            "Set OPENAI_API_KEY to enable agent chat."
+                        )
+                        break
+                    except LLMError as exc:
+                        state.stopped_reason = "llm_error"
+                        state.limitations.append(str(exc))
+                        state.final_answer = (
+                            "The language model request failed before "
+                            "investigation could continue."
+                        )
+                        break
 
-                message = llm_response.message
-                if message.tool_calls:
-                    await self._handle_tool_calls(state, tool_context, llm_response)
-                    continue
+                    message = llm_response.message
+                    if message.tool_calls:
+                        await self._handle_tool_calls(state, tool_context, llm_response)
+                        continue
 
-                content = (message.content or "").strip()
-                if content:
-                    state.final_answer = content
-                    self._extract_recommendations(state, content)
-                    state.stopped_reason = "completed"
+                    content = (message.content or "").strip()
+                    if content:
+                        state.final_answer = content
+                        self._extract_recommendations(state, content)
+                        state.stopped_reason = "completed"
+                        break
+
+                    state.stopped_reason = "empty_llm_response"
+                    state.limitations.append("Model returned an empty response.")
                     break
-
-                state.stopped_reason = "empty_llm_response"
-                state.limitations.append("Model returned an empty response.")
-                break
         finally:
+            duration = time.monotonic() - started
+            status = state.stopped_reason or "unknown"
+            observe_agent_request(
+                status=status,
+                duration_seconds=duration,
+                findings_count=len(state.findings),
+            )
+            emit_audit_event(
+                "agent_run_complete",
+                request_id=request_id,
+                user_identity=user_identity,
+                dashboard_uid=state.dashboard_uid,
+                status=status,
+                duration_ms=duration * 1000,
+                tool_call_count=len(state.tool_calls),
+            )
             logger.info(
                 "agent_run_complete",
                 dashboard_uid=state.dashboard_uid,
@@ -174,6 +203,8 @@ class AgentOrchestrator:
                 break
 
             call_id = call.id or f"call_{len(state.tool_calls)}"
+            tool_started = time.monotonic()
+            status = "success"
             try:
                 result = await self._registry.execute(call.name, call.arguments, tool_context)
                 record_tool_result(
@@ -185,6 +216,7 @@ class AgentOrchestrator:
                 )
                 state.messages.append(tool_result_message(call_id, call.name, result))
             except PermissionError as exc:
+                status = "denied"
                 payload = {"error": str(exc), "observed": False}
                 record_tool_result(
                     state,
@@ -195,6 +227,7 @@ class AgentOrchestrator:
                 )
                 state.messages.append(tool_result_message(call_id, call.name, payload))
             except Exception as exc:
+                status = "error"
                 payload = {"error": str(exc), "observed": False}
                 record_tool_result(
                     state,
@@ -204,6 +237,21 @@ class AgentOrchestrator:
                     error=str(exc),
                 )
                 state.messages.append(tool_result_message(call_id, call.name, payload))
+            finally:
+                duration = time.monotonic() - tool_started
+                observe_tool_call(
+                    tool_name=call.name,
+                    status=status,
+                    duration_seconds=duration,
+                )
+                emit_audit_event(
+                    "agent_tool_call",
+                    dashboard_uid=state.dashboard_uid,
+                    tool_name=call.name,
+                    tool_arguments=call.arguments,
+                    status=status,
+                    duration_ms=duration * 1000,
+                )
 
     def _extract_recommendations(self, state: AgentState, answer: str) -> None:
         marker = "Recommendation"

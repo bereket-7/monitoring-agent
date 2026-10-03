@@ -1,38 +1,73 @@
 # Monitoring Dashboard Intelligence Agent
 
-An AI-assisted observability engineering platform that sits on top of Grafana, Prometheus, Loki, and optionally Tempo.
+Validate Grafana dashboards against real observability data — with deterministic rules first, and an LLM only for investigation and explanation.
 
-## Product goal
+The agent helps engineers answer a single critical question:
 
-Help engineers answer:
+> Are the numbers on this dashboard correct, consistent, explainable, and properly filterable?
 
-> Are the numbers in this Grafana dashboard correct, consistent, explainable, and properly filterable?
+---
 
-The system analyzes Grafana dashboards, PromQL/LogQL queries, metric semantics, filters, and real monitoring data. It validates calculations deterministically and uses an LLM for reasoning, investigation, explanation, and recommendations.
+## Why this exists
 
-## Core principles
+Grafana dashboards often look authoritative while hiding subtle failures:
 
-1. **Evidence first.** Every important answer must reference the query, time range, filters, and source data used.
-2. **Deterministic correctness.** Mathematical and rule-based validation must not depend on the LLM.
-3. **LLM for reasoning.** The LLM interprets intent, chooses tools, investigates discrepancies, and explains findings.
-4. **Read-only by default.** Initial releases do not mutate Grafana dashboards or production infrastructure.
-5. **Reproducible analysis.** The same inputs should produce the same validation result even if the wording of the explanation changes.
-6. **Explicit uncertainty.** Never invent metric meanings, labels, or conclusions.
-7. **Small, testable components.** Prefer typed services and deterministic analyzers over a large autonomous agent.
+- success rates with mismatched numerators and denominators
+- filters that apply to some panels but not others
+- counters used without `rate` / `increase`
+- high-cardinality variables that make dashboards slow or misleading
+- duplicate or contradictory PromQL across panels
 
-## Documentation
+This project separates **mathematical correctness** (deterministic validators) from **reasoning** (read-only LLM tool calling), so explanations never override observed evidence.
 
-Start here:
+---
 
-- [DOC_INDEX.md](DOC_INDEX.md) — full documentation index
-- [CURSOR_MASTER_PROMPT.md](CURSOR_MASTER_PROMPT.md) — implementation instruction for Cursor
-- [docs/19_PHASES.md](docs/19_PHASES.md) — implementation phases
-- [docs/23_FIRST_MVP.md](docs/23_FIRST_MVP.md) — tightly scoped first MVP
-- [docs/25_MVP_BOUNDARIES.md](docs/25_MVP_BOUNDARIES.md) — locked MVP in/out scope
-- [docs/26_CODING_STANDARDS.md](docs/26_CODING_STANDARDS.md) — coding standards
-- [docs/27_ENVIRONMENT_CONTRACT.md](docs/27_ENVIRONMENT_CONTRACT.md) — environment variables
+## Features
 
-## Local development
+| Area | Capability |
+| --- | --- |
+| Dashboard sync | Import Grafana dashboards (panels, variables, queries) into PostgreSQL |
+| Query analysis | Normalize PromQL/LogQL, detect duplicates, surface static query issues |
+| Filter intelligence | Variable propagation, dead/partial filters, cardinality classification |
+| Validation engine | Success/error rates, consistency, latency aggregation, counter rate checks |
+| Agent chat | Budgeted, read-only tool loop with grounded evidence and confidence |
+| Web UI | Select a dashboard, run analysis, inspect findings/evidence, chat |
+| Production hardening | API keys, rate limits, secret redaction, metrics, optional OpenTelemetry |
+
+**Read-only by design.** The MVP does not write to Grafana, mutate infrastructure, or execute shell/kubectl.
+
+---
+
+## Architecture (high level)
+
+```text
+Browser (Next.js)
+        │
+        ▼
+   FastAPI (/api/v1)
+        │
+        ├── Deterministic analyzers & validators
+        ├── Read-only agent (structured tool calling)
+        └── Clients → Grafana · Prometheus · Loki · LLM
+                 │
+                 ▼
+            PostgreSQL · Redis
+```
+
+Confidence and factual claims are derived from successful tool results and validator output — not model intuition.
+
+---
+
+## Quick start
+
+### Prerequisites
+
+- Python 3.12+
+- Node.js 20+ (for the UI)
+- Docker Compose (PostgreSQL + Redis)
+- Optional: Grafana, Prometheus, Loki, and an OpenAI-compatible API key
+
+### Backend
 
 ```bash
 cp .env.example .env
@@ -42,7 +77,10 @@ alembic upgrade head
 uvicorn app.main:app --app-dir backend --reload
 ```
 
-Frontend (Phase 8, separate terminal):
+API base: `http://127.0.0.1:8000`  
+PostgreSQL is published on host port `15432` (see `.env.example`).
+
+### Frontend
 
 ```bash
 cd frontend
@@ -51,104 +89,137 @@ npm install
 npm run dev
 ```
 
-Open `http://localhost:3000`. Next.js rewrites `/api/v1/*` to the FastAPI backend (`API_ORIGIN`, default `http://127.0.0.1:8000`).
+UI: `http://localhost:3000`  
+Next.js rewrites `/api/v1/*` to the backend (`API_ORIGIN`, default `http://127.0.0.1:8000`).
 
-Compose publishes PostgreSQL on host port `15432` (see `.env.example`).
-
-Health probes:
-
-- `GET /health` — liveness
-- `GET /ready` — readiness (PostgreSQL)
-
-Dashboards (Phase 2):
-
-- `GET /api/v1/dashboards`
-- `GET /api/v1/dashboards/{uid}`
-- `POST /api/v1/dashboards/{uid}/sync` (requires `GRAFANA_URL` / `GRAFANA_API_TOKEN`)
-
-Metrics/logs clients (Phase 3):
-
-- `PrometheusClient` via `PROMETHEUS_URL`
-- `LokiClient` via optional `LOKI_URL` (degrades when unset)
-
-Deterministic validation (Phase 4):
-
-- Rules: `SR-001`, `ER-001`, `CONS-001/002/003`, `LAT-001`, `RATE-001`
-- Engine: `app.validators.ValidationEngine` (no LLM)
-
-Dashboard analysis (Phase 5–6):
-
-- `GET /api/v1/analysis/dashboards/{uid}` — query inventory, variable graph, duplicates, filter intelligence, static findings
-
-Agent chat (Phase 7):
-
-- `POST /api/v1/agent/chat` — read-only tool-calling investigation (`OPENAI_API_KEY` required for live LLM)
-- Evidence and confidence are grounded in successful tool results only
-
-Web UI (Phase 8):
-
-- Next.js app in `frontend/` — dashboard selector, analysis, findings, evidence, filters, agent chat
-- Does not embed or rebuild Grafana; links out when a dashboard URL is available
-
-Production hardening (Phase 10):
-
-- API key auth (`API_KEYS`, required by default in production), rate limits, secret redaction
-- Prometheus `/metrics`, optional OpenTelemetry traces, structured audit events
-- Kubernetes manifests under `deploy/kubernetes/`, Postgres backup helper under `deploy/backup/`
-- Security review checklist: [docs/29_PRODUCTION_SECURITY_REVIEW.md](docs/29_PRODUCTION_SECURITY_REVIEW.md)
-
-Validate:
+### Sync a dashboard
 
 ```bash
-make check
-make eval   # Phase 9 golden evaluation / regression suite
+# Requires GRAFANA_URL and a read-only GRAFANA_API_TOKEN
+curl -X POST http://127.0.0.1:8000/api/v1/dashboards/<uid>/sync
+```
+
+Then open the UI, select the dashboard, run analysis, and (optionally) ask the agent a question.
+
+---
+
+## API overview
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| `GET` | `/health` | Liveness |
+| `GET` | `/ready` | Readiness (PostgreSQL) |
+| `GET` | `/metrics` | Prometheus metrics |
+| `GET` | `/api/v1/dashboards` | List synced dashboards |
+| `GET` | `/api/v1/dashboards/{uid}` | Dashboard detail |
+| `POST` | `/api/v1/dashboards/{uid}/sync` | Sync from Grafana |
+| `GET` | `/api/v1/analysis/dashboards/{uid}` | Deterministic analysis report |
+| `POST` | `/api/v1/agent/chat` | Read-only agent investigation |
+
+In production, protect `/api/v1/*` with `API_KEYS` (Bearer or `X-API-Key`). Health, readiness, and metrics remain public.
+
+---
+
+## Validation rules (deterministic)
+
+| Rule ID | Focus |
+| --- | --- |
+| `SR-001` | Success rate formula and scope |
+| `ER-001` | Error rate and required error semantics |
+| `CONS-001` | Success + error ≈ total |
+| `CONS-002` | Compatible time windows |
+| `CONS-003` | Compatible filter scopes |
+| `LAT-001` | Quantile aggregation misuse |
+| `RATE-001` | Counters without rate/increase |
+| `FILTER-*` | Dead, partial, multi-value, and high-cardinality filters |
+| `QUERY-*` / `DASH-*` | Static query and dashboard quality findings |
+
+The LLM **cannot** override these results.
+
+---
+
+## Configuration
+
+All runtime config is via environment variables. See:
+
+- [`.env.example`](.env.example)
+- [`docs/27_ENVIRONMENT_CONTRACT.md`](docs/27_ENVIRONMENT_CONTRACT.md)
+
+Important production settings:
+
+| Variable | Purpose |
+| --- | --- |
+| `APP_ENV=production` | Enables production defaults |
+| `API_KEYS` | Comma-separated API keys (required when auth is on) |
+| `GRAFANA_API_TOKEN` | **Read-only** Grafana token |
+| `OPENAI_API_KEY` | Required for live agent chat |
+| `OTEL_ENABLED` / `OTEL_EXPORTER_OTLP_ENDPOINT` | Optional tracing |
+
+---
+
+## Development & quality gates
+
+```bash
+make check          # ruff + mypy + pytest
+make eval           # golden evaluation / regression suite
 # or
 docker compose run --rm --build check
 ```
 
-Follow [docs/19_PHASES.md](docs/19_PHASES.md). Do not skip phases.
+Frontend:
 
-## Initial scope
+```bash
+cd frontend && npm run lint && npm run build
+```
 
-- Import/read Grafana dashboards.
-- Read panels, queries, transformations, variables, and datasource references.
-- Execute PromQL against Prometheus.
-- Execute LogQL against Loki when configured.
-- Analyze common reliability metrics:
-  - request count
-  - request rate
-  - success rate
-  - error rate
-  - availability
-  - latency p50/p95/p99
-  - throughput
-- Validate formulas and filter propagation.
-- Detect common query problems.
-- Produce evidence-backed reports.
-- Provide an AI chat interface for dashboard questions.
+---
 
-## Explicit non-goals for MVP
+## Deployment
 
-- Autonomous infrastructure remediation.
-- Arbitrary shell execution.
-- Automatic production dashboard mutation.
-- Treating screenshots as the primary source of metric truth.
-- Allowing the LLM to decide mathematical correctness without deterministic validation.
+- Compose service: `docker compose up api` (with resource limits and healthchecks)
+- Kubernetes manifests: [`deploy/kubernetes/`](deploy/kubernetes/)
+- Postgres backup helper: [`deploy/backup/postgres-backup.sh`](deploy/backup/postgres-backup.sh)
+- Security checklist: [`docs/29_PRODUCTION_SECURITY_REVIEW.md`](docs/29_PRODUCTION_SECURITY_REVIEW.md)
+
+---
 
 ## Stack
 
-- Python 3.12+
-- FastAPI
-- Pydantic v2
-- SQLAlchemy 2
-- PostgreSQL
-- Redis
-- Grafana / Prometheus / Loki HTTP APIs
-- OpenAI structured tool calling
-- React/Next.js
-- Docker Compose
-- pytest, Ruff, mypy, OpenTelemetry
+| Layer | Technology |
+| --- | --- |
+| API | Python 3.12+, FastAPI, Pydantic v2, SQLAlchemy 2 |
+| Data | PostgreSQL, Redis |
+| Observability backends | Grafana, Prometheus, Loki (HTTP, read-only) |
+| Agent | OpenAI-compatible structured tool calling |
+| UI | Next.js / React |
+| Quality | pytest, Ruff, mypy, golden evaluation suite |
+| Ops | Docker Compose, Kubernetes, Prometheus metrics, OpenTelemetry |
 
-## Development order
+---
 
-Follow [docs/19_PHASES.md](docs/19_PHASES.md) and [docs/28_PHASE_STATUS.md](docs/28_PHASE_STATUS.md). Do not skip phases.
+## Documentation
+
+| Document | Description |
+| --- | --- |
+| [`DOC_INDEX.md`](DOC_INDEX.md) | Full documentation index |
+| [`docs/00_MASTER_SPEC.md`](docs/00_MASTER_SPEC.md) | Product mission and system boundary |
+| [`docs/25_MVP_BOUNDARIES.md`](docs/25_MVP_BOUNDARIES.md) | In-scope / out-of-scope lock |
+| [`docs/16_SECURITY.md`](docs/16_SECURITY.md) | Security principles |
+| [`docs/19_PHASES.md`](docs/19_PHASES.md) | Implementation phases |
+| [`docs/28_PHASE_STATUS.md`](docs/28_PHASE_STATUS.md) | Current delivery status |
+
+---
+
+## Non-goals (MVP)
+
+- Autonomous remediation or infrastructure mutation
+- Shell / kubectl / SQL write tools
+- Automatic Grafana dashboard writes
+- Treating screenshots or OCR as metric truth
+- Letting the LLM decide mathematical correctness without validators
+
+---
+
+## License
+
+Proprietary — see repository owner for distribution terms.

@@ -1,0 +1,89 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: monitoring-agent-api
+  labels:
+    app: monitoring-agent-api
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: monitoring-agent-api
+  template:
+    metadata:
+      labels:
+        app: monitoring-agent-api
+    spec:
+      containers:
+        - name: api
+          image: monitoring-dashboard-agent:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8000
+          envFrom:
+            - secretRef:
+                name: monitoring-agent-secrets
+            - configMapRef:
+                name: monitoring-agent-config
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 20
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 10001
+            capabilities:
+              drop: ["ALL"]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: monitoring-agent-api
+spec:
+  selector:
+    app: monitoring-agent-api
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: monitoring-agent-api
+  annotations:
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+spec:
+  tls:
+    - hosts:
+        - monitoring-agent.example.com
+      secretName: monitoring-agent-tls
+  rules:
+    - host: monitoring-agent.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: monitoring-agent-api
+                port:
+                  name: http

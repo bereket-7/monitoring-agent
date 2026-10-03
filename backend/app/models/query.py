@@ -1,4 +1,5 @@
-"""Query snapshot and analysis models.
+"""Query-related domain notes.
 
-Implemented starting in Phase 3-5.
+Typed Prometheus/Loki request and response models live in
+`app.schemas.query` (Phase 3). Persistence for query snapshots is Phase 5+.
 """

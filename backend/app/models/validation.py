@@ -1,4 +1,5 @@
-"""Validation finding models.
+"""Validation finding domain notes.
 
-Implemented in Phase 4.
+Typed validation findings and context live in `app.schemas.validation`.
+Persistence for findings is added with analysis runs in later phases.
 """

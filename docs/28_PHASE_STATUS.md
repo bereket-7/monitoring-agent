@@ -2,32 +2,29 @@
 
 ## Current phase
 
-**Phase 2 — Grafana integration: COMPLETE**
+**Phase 3 — Prometheus/Loki: COMPLETE**
 
 Previous:
 - Phase 0 — Specification: COMPLETE
 - Phase 1 — Scaffold: COMPLETE
+- Phase 2 — Grafana integration: COMPLETE
 
-Next: **Phase 3 — Prometheus/Loki**
+Next: **Phase 4 — Validation engine**
 
-## Phase 2 acceptance
+## Phase 3 acceptance
 
-- [x] Typed read-only Grafana client (timeouts, retries, error mapping)
-- [x] Dashboard / panel / variable ORM models + migration
-- [x] Dashboard JSON normalizer (panels, nested rows, variables, queries)
-- [x] Dashboard repository + sync service
-- [x] API: `GET /api/v1/dashboards`, `GET /api/v1/dashboards/{uid}`, `POST /api/v1/dashboards/{uid}/sync`
-- [x] Tests with mocked Grafana + sample dashboard fixture
-- [x] Lint / typecheck / tests green
+- [x] Typed read-only Prometheus client (instant/range/metadata/labels/series)
+- [x] Typed read-only Loki client (instant/range/labels; graceful when unset)
+- [x] Query/response models in `app.schemas.query`
+- [x] Timeouts, retries, response size limits, query length limits
+- [x] Typed failure mapping (`PrometheusQueryError`, `LokiUnavailableError`, etc.)
+- [x] Unit tests with mocked HTTP
+- [x] Lint / typecheck / tests green (27 tests)
 
 ## Validation
 
 ```bash
-docker compose up -d postgres redis
-py -3 -m alembic upgrade head
 py -3 -m ruff check backend migrations
 py -3 -m mypy
 py -3 -m pytest
 ```
-
-16 tests passing (Phase 1 + Phase 2).

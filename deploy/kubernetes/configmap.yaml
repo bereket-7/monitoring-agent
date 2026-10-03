@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: monitoring-agent-config
+data:
+  APP_ENV: "production"
+  LOG_LEVEL: "INFO"
+  API_PREFIX: "/api/v1"
+  API_AUTH_ENABLED: "true"
+  RATE_LIMIT_REQUESTS_PER_MINUTE: "60"
+  OTEL_ENABLED: "true"
+  OTEL_SERVICE_NAME: "monitoring-dashboard-agent"
+  REQUIRE_READONLY_CREDENTIALS: "true"
+  REDACT_EMAILS: "true"
+  AGENT_MAX_TOOL_CALLS: "20"
+  AGENT_MAX_ANALYSIS_SECONDS: "120"
+  MAX_QUERY_LENGTH: "4096"
+  MAX_TIME_RANGE_SECONDS: "604800"
+  QUERY_CONCURRENCY_LIMIT: "8"
+  CORS_ORIGINS: "https://monitoring-agent.example.com"

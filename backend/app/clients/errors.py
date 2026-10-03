@@ -26,3 +26,39 @@ class GrafanaAuthError(GrafanaClientError):
 
 class GrafanaTimeoutError(GrafanaClientError):
     """Grafana request timed out."""
+
+
+class PrometheusClientError(ExternalClientError):
+    """Prometheus request failed."""
+
+
+class PrometheusQueryError(PrometheusClientError):
+    """Prometheus returned a query execution error."""
+
+
+class PrometheusTimeoutError(PrometheusClientError):
+    """Prometheus request timed out."""
+
+
+class PrometheusResponseTooLargeError(PrometheusClientError):
+    """Prometheus response exceeded configured size limit."""
+
+
+class LokiClientError(ExternalClientError):
+    """Loki request failed."""
+
+
+class LokiQueryError(LokiClientError):
+    """Loki returned a query execution error."""
+
+
+class LokiTimeoutError(LokiClientError):
+    """Loki request timed out."""
+
+
+class LokiResponseTooLargeError(LokiClientError):
+    """Loki response exceeded configured size limit."""
+
+
+class LokiUnavailableError(LokiClientError):
+    """Loki is not configured; degrade gracefully."""

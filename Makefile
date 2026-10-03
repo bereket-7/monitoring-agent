@@ -1,4 +1,4 @@
-.PHONY: install check lint typecheck test format compose-up compose-down migrate phase1 docker-check
+.PHONY: install check lint typecheck test eval format compose-up compose-down migrate phase1 docker-check frontend-install frontend-build frontend-lint
 
 install:
 	python -m pip install -e ".[dev]"
@@ -15,7 +15,20 @@ typecheck:
 test:
 	pytest
 
+# Phase 9 regression suite (validators, filters/queries, agent grounding).
+eval:
+	pytest backend/tests/evaluation -q
+
 check: lint typecheck test
+
+frontend-install:
+	cd frontend && npm install
+
+frontend-lint:
+	cd frontend && npm run lint
+
+frontend-build:
+	cd frontend && npm run build
 
 compose-up:
 	docker compose up -d postgres redis

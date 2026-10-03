@@ -1,0 +1,29 @@
+# Documentation Index
+
+- `README.md` — project overview
+- `CURSOR_MASTER_PROMPT.md` — paste this into Cursor as the main project instruction
+- `docs/00_MASTER_SPEC.md` — complete product specification
+- `docs/01_ARCHITECTURE.md` — architecture
+- `docs/02_REQUIREMENTS.md` — requirements
+- `docs/03_PROJECT_SCAFFOLD.md` — repository structure
+- `docs/04_DATA_MODEL.md` — database model
+- `docs/05_API_CONTRACT.md` — API contract
+- `docs/06_EXTERNAL_INTEGRATIONS.md` — Grafana/Prometheus/Loki/LLM integrations
+- `docs/07_METRIC_SEMANTICS.md` — metric definitions
+- `docs/08_VALIDATION_ENGINE.md` — deterministic validation
+- `docs/09_DASHBOARD_ANALYZER.md` — dashboard analysis
+- `docs/10_FILTER_ENGINE.md` — filter intelligence
+- `docs/11_QUERY_ANALYZER.md` — PromQL/LogQL analysis
+- `docs/12_AGENT_DESIGN.md` — agent architecture
+- `docs/13_AGENT_PROMPTS.md` — prompt specification
+- `docs/14_UI_SPEC.md` — UI
+- `docs/15_TESTING_AND_EVALUATION.md` — testing/evaluation
+- `docs/16_SECURITY.md` — security
+- `docs/17_OBSERVABILITY.md` — agent observability
+- `docs/18_DEPLOYMENT.md` — deployment
+- `docs/19_PHASES.md` — implementation phases
+- `docs/20_CURSOR_WORKFLOW.md` — Cursor workflow
+- `docs/21_PHASE_PROMPTS.md` — ready-to-paste phase prompts
+- `docs/22_DEFINITION_OF_DONE.md` — completion checklist
+- `docs/23_FIRST_MVP.md` — tightly scoped MVP
+- `docs/24_FUTURE_ROADMAP.md` — post-MVP roadmap

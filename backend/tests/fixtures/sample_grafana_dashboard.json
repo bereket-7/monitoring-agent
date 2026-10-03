@@ -1,0 +1,83 @@
+{
+  "meta": {
+    "uid": "api-overview",
+    "url": "/d/api-overview/api-overview",
+    "folderTitle": "Observability"
+  },
+  "dashboard": {
+    "uid": "api-overview",
+    "title": "API Overview",
+    "links": [{"title": "Runbook", "url": "https://example.com/runbook"}],
+    "templating": {
+      "list": [
+        {
+          "name": "service",
+          "label": "Service",
+          "type": "query",
+          "multi": true,
+          "includeAll": true,
+          "query": "label_values(http_requests_total, service)",
+          "current": {"text": "payment-api", "value": "payment-api"}
+        },
+        {
+          "name": "environment",
+          "label": "Environment",
+          "type": "custom",
+          "multi": false,
+          "includeAll": false,
+          "query": "production,staging",
+          "current": {"text": "production", "value": "production"}
+        }
+      ]
+    },
+    "panels": [
+      {
+        "id": 1,
+        "type": "row",
+        "title": "Traffic",
+        "panels": [
+          {
+            "id": 2,
+            "title": "Request Count",
+            "type": "timeseries",
+            "datasource": {"type": "prometheus", "uid": "prom-uid"},
+            "targets": [
+              {
+                "refId": "A",
+                "expr": "sum(rate(http_requests_total{service=~\"$service\", environment=\"$environment\"}[5m]))",
+                "datasource": {"type": "prometheus", "uid": "prom-uid"}
+              }
+            ],
+            "transformations": [],
+            "fieldConfig": {"defaults": {"unit": "reqps"}}
+          },
+          {
+            "id": 3,
+            "title": "Success Rate",
+            "type": "stat",
+            "datasource": {"type": "prometheus", "uid": "prom-uid"},
+            "targets": [
+              {
+                "refId": "A",
+                "expr": "sum(rate(http_requests_total{status=~\"2..\", service=~\"$service\"}[5m])) / sum(rate(http_requests_total{service=~\"$service\"}[5m]))"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "title": "Error Logs",
+        "type": "logs",
+        "datasource": {"type": "loki", "uid": "loki-uid"},
+        "targets": [
+          {
+            "refId": "A",
+            "expr": "{service=~\"$service\"} |= \"error\"",
+            "datasource": {"type": "loki", "uid": "loki-uid"}
+          }
+        ]
+      }
+    ]
+  }
+}

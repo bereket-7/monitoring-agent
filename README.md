@@ -36,11 +36,26 @@ Start here:
 
 ```bash
 cp .env.example .env
-make install
-make check
+docker compose up -d postgres redis
+python -m pip install -e ".[dev]"
+alembic upgrade head
+uvicorn app.main:app --app-dir backend --reload
 ```
 
-Application runtime (FastAPI, DB, health endpoints) begins in Phase 1.
+Compose publishes PostgreSQL on host port `15432` (see `.env.example`).
+
+Health probes:
+
+- `GET /health` — liveness
+- `GET /ready` — readiness (PostgreSQL)
+
+Validate:
+
+```bash
+make check
+# or
+docker compose run --rm --build check
+```
 
 Follow [docs/19_PHASES.md](docs/19_PHASES.md). Do not skip phases.
 

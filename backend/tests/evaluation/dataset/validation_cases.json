@@ -1,0 +1,364 @@
+[
+  {
+    "id": "correct_success_rate",
+    "category": "correctness",
+    "question": "Is the success rate correct?",
+    "dashboard": null,
+    "expected_findings": [
+      {"rule_id": "SR-001", "severity": "info"},
+      {"rule_id": "ER-001", "severity": "info"},
+      {"rule_id": "CONS-001", "severity": "info"}
+    ],
+    "forbidden_findings": [
+      {"rule_id": "SR-001", "severity": "error"},
+      {"rule_id": "ER-001", "severity": "error"}
+    ],
+    "required_evidence": ["success", "total"],
+    "forbidden_claims": [],
+    "validation": {
+      "observations": [
+        {
+          "name": "success",
+          "role": "success",
+          "value": 97.0,
+          "query": "sum(rate(http_requests_total{status=~\"2..|3..\"}[5m]))",
+          "time_range": {"window": "5m"},
+          "filters": {"service": "payment-api", "environment": "production"},
+          "metric_type": "counter"
+        },
+        {
+          "name": "error",
+          "role": "error",
+          "value": 3.0,
+          "query": "sum(rate(http_requests_total{status=~\"5..\"}[5m]))",
+          "time_range": {"window": "5m"},
+          "filters": {"service": "payment-api", "environment": "production"},
+          "metric_type": "counter"
+        },
+        {
+          "name": "total",
+          "role": "total",
+          "value": 100.0,
+          "query": "sum(rate(http_requests_total[5m]))",
+          "time_range": {"window": "5m"},
+          "filters": {"service": "payment-api", "environment": "production"},
+          "metric_type": "counter"
+        }
+      ],
+      "semantics": {
+        "success_definition": "http_2xx_3xx",
+        "error_definition": "http_5xx",
+        "total_definition": "all_requests"
+      },
+      "reported_success_rate": 97.0,
+      "reported_error_rate": 3.0
+    }
+  },
+  {
+    "id": "wrong_denominator",
+    "category": "correctness",
+    "question": "Is the success rate denominator scoped correctly?",
+    "rule_id": "SR-001",
+    "expected_findings": [{"rule_id": "SR-001", "severity": "error"}],
+    "forbidden_findings": [{"rule_id": "SR-001", "severity": "info"}],
+    "required_evidence": ["scope"],
+    "validation": {
+      "observations": [
+        {
+          "name": "success",
+          "role": "success",
+          "value": 97.0,
+          "query": "sum(rate(http_requests_total{status=~\"2..\"}[5m]))",
+          "time_range": {"window": "5m"},
+          "filters": {"service": "payment-api", "environment": "production"},
+          "metric_type": "counter"
+        },
+        {
+          "name": "total",
+          "role": "total",
+          "value": 100.0,
+          "query": "sum(rate(http_requests_total[5m]))",
+          "time_range": {"window": "5m"},
+          "filters": {"service": "checkout-api", "environment": "production"},
+          "metric_type": "counter"
+        }
+      ],
+      "semantics": {
+        "success_definition": "http_2xx_3xx",
+        "total_definition": "all_requests"
+      },
+      "reported_success_rate": 97.0
+    }
+  },
+  {
+    "id": "wrong_numerator",
+    "category": "correctness",
+    "question": "What happens when the success numerator is missing?",
+    "rule_id": "SR-001",
+    "expected_findings": [{"rule_id": "SR-001", "severity": "error"}],
+    "forbidden_findings": [{"rule_id": "SR-001", "severity": "info"}],
+    "required_evidence": [],
+    "validation": {
+      "observations": [
+        {
+          "name": "total",
+          "role": "total",
+          "value": 100.0,
+          "query": "sum(rate(http_requests_total[5m]))",
+          "filters": {"service": "payment-api"},
+          "metric_type": "counter"
+        }
+      ],
+      "semantics": {"success_definition": "http_2xx_3xx"}
+    }
+  },
+  {
+    "id": "error_definition_required",
+    "category": "correctness",
+    "question": "Are 4xx/5xx error semantics required before trusting error rate?",
+    "rule_id": "ER-001",
+    "expected_findings": [{"rule_id": "ER-001", "severity": "error"}],
+    "forbidden_findings": [{"rule_id": "ER-001", "severity": "info"}],
+    "validation": {
+      "observations": [
+        {
+          "name": "error",
+          "role": "error",
+          "value": 3.0,
+          "query": "sum(rate(http_requests_total{status=~\"5..\"}[5m]))",
+          "time_range": {"window": "5m"},
+          "filters": {"service": "payment-api"},
+          "metric_type": "counter"
+        },
+        {
+          "name": "total",
+          "role": "total",
+          "value": 100.0,
+          "query": "sum(rate(http_requests_total[5m]))",
+          "time_range": {"window": "5m"},
+          "filters": {"service": "payment-api"},
+          "metric_type": "counter"
+        }
+      ],
+      "semantics": {
+        "success_definition": "http_2xx_3xx",
+        "error_definition": null,
+        "total_definition": "all_requests"
+      }
+    }
+  },
+  {
+    "id": "5xx_only_error_definition",
+    "category": "correctness",
+    "question": "Does a configured 5xx-only error definition validate cleanly?",
+    "rule_id": "ER-001",
+    "expected_findings": [{"rule_id": "ER-001", "severity": "info"}],
+    "forbidden_findings": [{"rule_id": "ER-001", "severity": "error"}],
+    "validation": {
+      "observations": [
+        {
+          "name": "error",
+          "role": "error",
+          "value": 3.0,
+          "query": "sum(rate(http_requests_total{status=~\"5..\"}[5m]))",
+          "time_range": {"window": "5m"},
+          "filters": {"service": "payment-api", "environment": "production"},
+          "metric_type": "counter"
+        },
+        {
+          "name": "total",
+          "role": "total",
+          "value": 100.0,
+          "query": "sum(rate(http_requests_total[5m]))",
+          "time_range": {"window": "5m"},
+          "filters": {"service": "payment-api", "environment": "production"},
+          "metric_type": "counter"
+        }
+      ],
+      "semantics": {
+        "success_definition": "http_2xx_3xx",
+        "error_definition": "http_5xx",
+        "total_definition": "all_requests"
+      },
+      "reported_error_rate": 3.0
+    }
+  },
+  {
+    "id": "mismatched_time_ranges",
+    "category": "correctness",
+    "question": "Are mismatched windows detected?",
+    "rule_id": "CONS-002",
+    "expected_findings": [{"rule_id": "CONS-002", "severity": "error"}],
+    "forbidden_findings": [{"rule_id": "CONS-002", "severity": "info"}],
+    "validation": {
+      "observations": [
+        {
+          "name": "success",
+          "role": "success",
+          "value": 97.0,
+          "query": "sum(rate(http_requests_total{status=~\"2..\"}[5m]))",
+          "time_range": {"window": "5m"},
+          "filters": {"service": "payment-api"},
+          "metric_type": "counter"
+        },
+        {
+          "name": "total",
+          "role": "total",
+          "value": 100.0,
+          "query": "sum(rate(http_requests_total[1h]))",
+          "time_range": {"window": "1h"},
+          "filters": {"service": "payment-api"},
+          "metric_type": "counter"
+        }
+      ],
+      "semantics": {
+        "success_definition": "http_2xx_3xx",
+        "total_definition": "all_requests"
+      }
+    }
+  },
+  {
+    "id": "mismatched_service_filters",
+    "category": "filter_correctness",
+    "question": "Are mismatched service filters detected?",
+    "rule_id": "CONS-003",
+    "expected_findings": [{"rule_id": "CONS-003", "severity": "error"}],
+    "forbidden_findings": [{"rule_id": "CONS-003", "severity": "info"}],
+    "validation": {
+      "observations": [
+        {
+          "name": "success",
+          "role": "success",
+          "value": 97.0,
+          "query": "sum(rate(http_requests_total{status=~\"2..\"}[5m]))",
+          "time_range": {"window": "5m"},
+          "filters": {"service": "payment-api"},
+          "metric_type": "counter"
+        },
+        {
+          "name": "total",
+          "role": "total",
+          "value": 100.0,
+          "query": "sum(rate(http_requests_total[5m]))",
+          "time_range": {"window": "5m"},
+          "filters": {"service": "checkout-api"},
+          "metric_type": "counter"
+        }
+      ],
+      "semantics": {
+        "success_definition": "http_2xx_3xx",
+        "total_definition": "all_requests"
+      }
+    }
+  },
+  {
+    "id": "counter_without_rate",
+    "category": "query_validity",
+    "question": "Is a raw counter without rate flagged?",
+    "rule_id": "RATE-001",
+    "expected_findings": [{"rule_id": "RATE-001", "severity": "error"}],
+    "forbidden_findings": [],
+    "validation": {
+      "observations": [
+        {
+          "name": "raw_counter",
+          "role": "total",
+          "value": 10.0,
+          "query": "http_requests_total",
+          "metric_type": "counter"
+        }
+      ],
+      "semantics": {}
+    }
+  },
+  {
+    "id": "bad_p95_aggregation",
+    "category": "query_validity",
+    "question": "Is averaging a quantile flagged?",
+    "rule_id": "LAT-001",
+    "expected_findings": [{"rule_id": "LAT-001", "severity": "error"}],
+    "forbidden_findings": [],
+    "validation": {
+      "observations": [
+        {
+          "name": "latency_p95",
+          "role": "latency",
+          "value": 0.2,
+          "query": "avg(histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])))",
+          "metric_type": "histogram"
+        }
+      ],
+      "semantics": {}
+    }
+  },
+  {
+    "id": "missing_telemetry",
+    "category": "correctness",
+    "question": "Is missing telemetry treated as an error instead of zero?",
+    "rule_id": "SR-001",
+    "expected_findings": [{"rule_id": "SR-001", "severity": "error"}],
+    "forbidden_findings": [{"rule_id": "SR-001", "severity": "info"}],
+    "validation": {
+      "observations": [
+        {
+          "name": "success",
+          "role": "success",
+          "value": null,
+          "query": "sum(rate(http_requests_total{status=~\"2..\"}[5m]))",
+          "time_range": {"window": "5m"},
+          "filters": {"service": "payment-api", "environment": "production"},
+          "metric_type": "counter"
+        },
+        {
+          "name": "total",
+          "role": "total",
+          "value": 100.0,
+          "query": "sum(rate(http_requests_total[5m]))",
+          "time_range": {"window": "5m"},
+          "filters": {"service": "payment-api", "environment": "production"},
+          "metric_type": "counter"
+        }
+      ],
+      "semantics": {
+        "success_definition": "http_2xx_3xx",
+        "total_definition": "all_requests"
+      }
+    }
+  },
+  {
+    "id": "unknown_metric_semantics",
+    "category": "correctness",
+    "question": "Are unknown success semantics surfaced?",
+    "rule_id": "SR-001",
+    "expected_findings": [{"rule_id": "SR-001", "severity": "warning"}],
+    "forbidden_findings": [{"rule_id": "SR-001", "severity": "error"}],
+    "validation": {
+      "observations": [
+        {
+          "name": "success",
+          "role": "success",
+          "value": 97.0,
+          "query": "sum(rate(http_requests_total{status=~\"2..\"}[5m]))",
+          "time_range": {"window": "5m"},
+          "filters": {"service": "payment-api", "environment": "production"},
+          "metric_type": "counter"
+        },
+        {
+          "name": "total",
+          "role": "total",
+          "value": 100.0,
+          "query": "sum(rate(http_requests_total[5m]))",
+          "time_range": {"window": "5m"},
+          "filters": {"service": "payment-api", "environment": "production"},
+          "metric_type": "counter"
+        }
+      ],
+      "semantics": {
+        "success_definition": null,
+        "error_definition": "http_5xx",
+        "total_definition": "all_requests"
+      },
+      "reported_success_rate": 97.0
+    }
+  }
+]

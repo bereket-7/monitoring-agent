@@ -21,6 +21,7 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     api_prefix: str = "/api/v1"
     request_timeout_seconds: float = 30.0
+    cors_origins: str = "http://localhost:3000,http://127.0.0.1:3000"
 
     database_url: str = (
         "postgresql+asyncpg://postgres:postgres@localhost:15432/monitoring_agent"
@@ -51,6 +52,23 @@ class Settings(BaseSettings):
     max_query_length: int = 4096
     max_time_range_seconds: int = 604_800
     query_concurrency_limit: int = 8
+
+    # Auth / rate limits (Phase 10). api_auth_enabled=None means: required in production.
+    api_auth_enabled: bool | None = None
+    api_keys: str = ""
+    rate_limit_requests_per_minute: int = Field(default=60, ge=0)
+
+    # Redaction before LLM / audit
+    redact_emails: bool = True
+
+    # OpenTelemetry
+    otel_enabled: bool = False
+    otel_service_name: str = "monitoring-dashboard-agent"
+    otel_exporter_otlp_endpoint: str | None = None
+
+    # Credential posture documentation / startup checks
+    require_readonly_credentials: bool = True
+
 
 
 @lru_cache(maxsize=1)

@@ -57,11 +57,26 @@ services:
       DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/monitoring_agent
       REDIS_URL: redis://redis:6379/0
       PYTHONPATH: /app/backend
+      RATE_LIMIT_REQUESTS_PER_MINUTE: "120"
+      REQUIRE_READONLY_CREDENTIALS: "true"
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1G
+        reservations:
+          cpus: "0.25"
+          memory: 256M
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     command: >
       sh -c "alembic upgrade head &&
              uvicorn app.main:app --host 0.0.0.0 --port 8000"

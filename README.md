@@ -42,6 +42,17 @@ alembic upgrade head
 uvicorn app.main:app --app-dir backend --reload
 ```
 
+Frontend (Phase 8, separate terminal):
+
+```bash
+cd frontend
+cp .env.example .env.local
+npm install
+npm run dev
+```
+
+Open `http://localhost:3000`. Next.js rewrites `/api/v1/*` to the FastAPI backend (`API_ORIGIN`, default `http://127.0.0.1:8000`).
+
 Compose publishes PostgreSQL on host port `15432` (see `.env.example`).
 
 Health probes:
@@ -74,10 +85,23 @@ Agent chat (Phase 7):
 - `POST /api/v1/agent/chat` — read-only tool-calling investigation (`OPENAI_API_KEY` required for live LLM)
 - Evidence and confidence are grounded in successful tool results only
 
+Web UI (Phase 8):
+
+- Next.js app in `frontend/` — dashboard selector, analysis, findings, evidence, filters, agent chat
+- Does not embed or rebuild Grafana; links out when a dashboard URL is available
+
+Production hardening (Phase 10):
+
+- API key auth (`API_KEYS`, required by default in production), rate limits, secret redaction
+- Prometheus `/metrics`, optional OpenTelemetry traces, structured audit events
+- Kubernetes manifests under `deploy/kubernetes/`, Postgres backup helper under `deploy/backup/`
+- Security review checklist: [docs/29_PRODUCTION_SECURITY_REVIEW.md](docs/29_PRODUCTION_SECURITY_REVIEW.md)
+
 Validate:
 
 ```bash
 make check
+make eval   # Phase 9 golden evaluation / regression suite
 # or
 docker compose run --rm --build check
 ```

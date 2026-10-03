@@ -13,8 +13,8 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 from app.config import get_settings
 from app.db.base import Base
 
-# Import model modules here as they are added so metadata is complete.
-# Phase 1 has no domain tables yet.
+# Import model modules so metadata is complete for autogenerate/migrations.
+from app.models import dashboard as _dashboard_models  # noqa: F401
 
 config = context.config
 

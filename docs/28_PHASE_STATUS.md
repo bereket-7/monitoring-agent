@@ -2,21 +2,25 @@
 
 ## Current phase
 
-**Phase 7 — Agent** — COMPLETE
+**Phase 10 — Production hardening** — COMPLETE
 
 Previous:
-- Phase 0–6: COMPLETE
+- Phase 0–9: COMPLETE
 
-Next: **Phase 8 — UI**
+All planned phases (0–10) are complete.
 
-## Phase 7 acceptance
+## Phase 10 acceptance
 
-- [x] AgentState + tool registry + policies
-- [x] Structured tool calling + bounded orchestration loop
-- [x] Evidence collector + response formatter
-- [x] Versioned prompts under `/prompts`
-- [x] `POST /api/v1/agent/chat`
-- [x] Mocked LLM/tool tests
+- [x] Authentication (API keys; required in production)
+- [x] Rate limiting (Redis + memory fallback)
+- [x] Secret redaction (LLM + audit)
+- [x] OpenTelemetry tracing (optional)
+- [x] Prometheus metrics (`/metrics`)
+- [x] Structured audit events
+- [x] Health/readiness + deployment probes
+- [x] Secure deployment manifests + resource limits
+- [x] Backup helper
+- [x] Production security review doc
 - [x] Lint / typecheck / tests green
 
 ## Validation
@@ -25,9 +29,9 @@ Next: **Phase 8 — UI**
 py -3 -m ruff check backend migrations
 py -3 -m mypy
 py -3 -m pytest
+make eval
 ```
 
 Results (2026-10-03):
-- ruff: All checks passed
-- mypy: Success (61 source files)
-- pytest: 60 passed
+- ruff / mypy: green (69 source files)
+- pytest: 91 passed

@@ -7,6 +7,8 @@ from collections.abc import AsyncIterator
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.clients.grafana import GrafanaClient
+from app.clients.loki import LokiClient
+from app.clients.prometheus import PrometheusClient
 from app.config import Settings, get_settings
 from app.db import get_session_factory
 
@@ -23,6 +25,22 @@ def get_app_settings() -> Settings:
 
 async def get_grafana_client() -> AsyncIterator[GrafanaClient]:
     client = GrafanaClient(get_settings())
+    try:
+        yield client
+    finally:
+        await client.aclose()
+
+
+async def get_prometheus_client() -> AsyncIterator[PrometheusClient]:
+    client = PrometheusClient(get_settings())
+    try:
+        yield client
+    finally:
+        await client.aclose()
+
+
+async def get_loki_client() -> AsyncIterator[LokiClient]:
+    client = LokiClient(get_settings())
     try:
         yield client
     finally:

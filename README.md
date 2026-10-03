@@ -60,6 +60,11 @@ Metrics/logs clients (Phase 3):
 - `PrometheusClient` via `PROMETHEUS_URL`
 - `LokiClient` via optional `LOKI_URL` (degrades when unset)
 
+Deterministic validation (Phase 4):
+
+- Rules: `SR-001`, `ER-001`, `CONS-001/002/003`, `LAT-001`, `RATE-001`
+- Engine: `app.validators.ValidationEngine` (no LLM)
+
 Validate:
 
 ```bash

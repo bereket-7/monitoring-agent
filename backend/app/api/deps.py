@@ -7,6 +7,7 @@ from collections.abc import AsyncIterator
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.clients.grafana import GrafanaClient
+from app.clients.llm import LLMClient, LLMClientProtocol
 from app.clients.loki import LokiClient
 from app.clients.prometheus import PrometheusClient
 from app.config import Settings, get_settings
@@ -41,6 +42,14 @@ async def get_prometheus_client() -> AsyncIterator[PrometheusClient]:
 
 async def get_loki_client() -> AsyncIterator[LokiClient]:
     client = LokiClient(get_settings())
+    try:
+        yield client
+    finally:
+        await client.aclose()
+
+
+async def get_llm_client() -> AsyncIterator[LLMClientProtocol]:
+    client: LLMClientProtocol = LLMClient(get_settings())
     try:
         yield client
     finally:

@@ -1,4 +1,5 @@
-"""Analysis run models.
+"""Analysis domain notes.
 
-Implemented starting in Phase 1-4.
+Typed analysis reports live in `app.schemas.analysis`.
+Persistence for analysis runs is added in later phases.
 """

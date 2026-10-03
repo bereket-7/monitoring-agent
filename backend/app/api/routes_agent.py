@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.agent.orchestrator import AgentOrchestrator
@@ -32,6 +32,7 @@ AppSettings = Annotated[Settings, Depends(get_settings)]
 @router.post("/chat", response_model=AgentChatResponse)
 async def agent_chat(
     request: AgentChatRequest,
+    http_request: Request,
     session: DbSession,
     prometheus: Prometheus,
     loki: Loki,
@@ -52,4 +53,8 @@ async def agent_chat(
         session=session,
         settings=settings,
     )
-    return await orchestrator.run(request)
+    return await orchestrator.run(
+        request,
+        request_id=str(getattr(http_request.state, "request_id", "unknown")),
+        user_identity=str(getattr(http_request.state, "user_identity", "anonymous")),
+    )

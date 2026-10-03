@@ -1,0 +1,248 @@
+[
+  {
+    "id": "unused_dashboard_variable",
+    "category": "filter_correctness",
+    "question": "Is an unused variable detected as dead?",
+    "expected_findings": [
+      {"rule_id": "FILTER-002", "severity": "warning"}
+    ],
+    "forbidden_findings": [],
+    "expected_dead_variables": ["unused"],
+    "expected_partial_variables": [],
+    "dashboard": {
+      "uid": "eval-unused-var",
+      "title": "Unused Variable",
+      "templating": {
+        "list": [
+          {
+            "name": "service",
+            "type": "query",
+            "multi": false,
+            "includeAll": false,
+            "query": "label_values(http_requests_total, service)"
+          },
+          {
+            "name": "unused",
+            "type": "custom",
+            "multi": false,
+            "includeAll": false,
+            "query": "a,b"
+          }
+        ]
+      },
+      "panels": [
+        {
+          "id": 1,
+          "title": "Requests",
+          "type": "stat",
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum(rate(http_requests_total{service=\"$service\"}[5m]))"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "id": "partial_filter_propagation",
+    "category": "filter_correctness",
+    "question": "Is a filter affecting only some panels flagged?",
+    "expected_findings": [
+      {"rule_id": "FILTER-001", "severity": "warning"}
+    ],
+    "forbidden_findings": [
+      {"rule_id": "FILTER-002", "severity": "warning"}
+    ],
+    "expected_dead_variables": [],
+    "expected_partial_variables": ["service"],
+    "dashboard": {
+      "uid": "eval-partial-filter",
+      "title": "Partial Filter",
+      "templating": {
+        "list": [
+          {
+            "name": "service",
+            "type": "query",
+            "multi": true,
+            "includeAll": true,
+            "query": "label_values(http_requests_total, service)"
+          }
+        ]
+      },
+      "panels": [
+        {
+          "id": 1,
+          "title": "A",
+          "type": "stat",
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum(rate(http_requests_total{service=~\"$service\"}[5m]))"
+            }
+          ]
+        },
+        {
+          "id": 2,
+          "title": "B",
+          "type": "stat",
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum(rate(http_requests_total[5m]))"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "id": "high_cardinality_filter",
+    "category": "filter_correctness",
+    "question": "Is a high-cardinality pod filter classified as avoid?",
+    "expected_findings": [
+      {"rule_id": "FILTER-003", "severity": "error"}
+    ],
+    "forbidden_findings": [],
+    "label_cardinality": {"pod": 8000},
+    "expected_cardinality_class": {"pod": "avoid"},
+    "dashboard": {
+      "uid": "eval-high-card",
+      "title": "High Cardinality",
+      "templating": {
+        "list": [
+          {
+            "name": "pod",
+            "type": "query",
+            "multi": true,
+            "includeAll": true,
+            "query": "label_values(up, pod)"
+          }
+        ]
+      },
+      "panels": [
+        {
+          "id": 1,
+          "title": "Pods",
+          "type": "stat",
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "up{pod=~\"$pod\"}"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "id": "duplicate_query",
+    "category": "query_validity",
+    "question": "Are duplicate normalized queries detected?",
+    "expected_findings": [
+      {"rule_id": "QUERY-001"}
+    ],
+    "forbidden_findings": [],
+    "dashboard": {
+      "uid": "eval-dup-query",
+      "title": "Duplicate Query",
+      "templating": {
+        "list": [
+          {
+            "name": "service",
+            "type": "query",
+            "query": "label_values(up, service)"
+          }
+        ]
+      },
+      "panels": [
+        {
+          "id": 1,
+          "title": "A",
+          "type": "stat",
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum(rate(http_requests_total{service=\"$service\"}[5m]))"
+            }
+          ]
+        },
+        {
+          "id": 2,
+          "title": "B",
+          "type": "stat",
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum(rate(http_requests_total{service=\"$service\"}[5m]))"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "id": "multi_value_requires_regex",
+    "category": "filter_correctness",
+    "question": "Does multi-value equality syntax get flagged?",
+    "expected_findings": [
+      {"rule_id": "FILTER-004"}
+    ],
+    "forbidden_findings": [],
+    "dashboard": {
+      "uid": "eval-multi-eq",
+      "title": "Multi Equality",
+      "templating": {
+        "list": [
+          {
+            "name": "service",
+            "type": "query",
+            "multi": true,
+            "includeAll": false,
+            "query": "label_values(http_requests_total, service)"
+          }
+        ]
+      },
+      "panels": [
+        {
+          "id": 1,
+          "title": "Requests",
+          "type": "stat",
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum(rate(http_requests_total{service=\"$service\"}[5m]))"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "id": "query_structure_valid",
+    "category": "query_validity",
+    "question": "Does a normal rate query parse with expected metrics/labels?",
+    "expected_metrics": ["http_requests_total"],
+    "expected_labels": ["service"],
+    "expected_functions": ["sum", "rate"],
+    "dashboard": {
+      "uid": "eval-query-valid",
+      "title": "Valid Query",
+      "templating": {"list": []},
+      "panels": [
+        {
+          "id": 1,
+          "title": "Requests",
+          "type": "stat",
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum(rate(http_requests_total{service=\"payment-api\"}[5m]))"
+            }
+          ]
+        }
+      ]
+    }
+  }
+]

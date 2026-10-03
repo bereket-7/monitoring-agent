@@ -55,6 +55,11 @@ Dashboards (Phase 2):
 - `GET /api/v1/dashboards/{uid}`
 - `POST /api/v1/dashboards/{uid}/sync` (requires `GRAFANA_URL` / `GRAFANA_API_TOKEN`)
 
+Metrics/logs clients (Phase 3):
+
+- `PrometheusClient` via `PROMETHEUS_URL`
+- `LokiClient` via optional `LOKI_URL` (degrades when unset)
+
 Validate:
 
 ```bash

@@ -8,6 +8,8 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from app.api.middleware import RequestIdMiddleware
+from app.api.routes_agent import router as agent_router
+from app.api.routes_analysis import router as analysis_router
 from app.api.routes_dashboards import router as dashboards_router
 from app.api.routes_health import router as health_router
 from app.config import get_settings
@@ -43,6 +45,8 @@ def create_app() -> FastAPI:
     app.add_middleware(RequestIdMiddleware)
     app.include_router(health_router)
     app.include_router(dashboards_router, prefix=settings.api_prefix)
+    app.include_router(analysis_router, prefix=settings.api_prefix)
+    app.include_router(agent_router, prefix=settings.api_prefix)
 
     app.state.settings = settings
     return app

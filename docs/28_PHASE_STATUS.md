@@ -2,35 +2,32 @@
 
 ## Current phase
 
-**Phase 1 — Scaffold: COMPLETE**
+**Phase 2 — Grafana integration: COMPLETE**
 
-Previous: **Phase 0 — Specification: COMPLETE**
+Previous:
+- Phase 0 — Specification: COMPLETE
+- Phase 1 — Scaffold: COMPLETE
 
-Next: **Phase 2 — Grafana integration**
+Next: **Phase 3 — Prometheus/Loki**
 
-## Phase 1 acceptance
+## Phase 2 acceptance
 
-- [x] FastAPI application factory
-- [x] Pydantic settings / environment contract
-- [x] Structured logging + request IDs
-- [x] PostgreSQL async SQLAlchemy engine/session
-- [x] Alembic migration pipeline + baseline revision
-- [x] `GET /health` and `GET /ready`
-- [x] Docker Compose for PostgreSQL and Redis
-- [x] App starts (`uvicorn`)
-- [x] DB connects (`/ready` + integration tests)
-- [x] Tests run (`pytest`)
-- [x] Lint/type checks run (`ruff`, `mypy`)
+- [x] Typed read-only Grafana client (timeouts, retries, error mapping)
+- [x] Dashboard / panel / variable ORM models + migration
+- [x] Dashboard JSON normalizer (panels, nested rows, variables, queries)
+- [x] Dashboard repository + sync service
+- [x] API: `GET /api/v1/dashboards`, `GET /api/v1/dashboards/{uid}`, `POST /api/v1/dashboards/{uid}/sync`
+- [x] Tests with mocked Grafana + sample dashboard fixture
+- [x] Lint / typecheck / tests green
 
-## Validation command
+## Validation
 
 ```bash
 docker compose up -d postgres redis
-alembic upgrade head
-make check
+py -3 -m alembic upgrade head
+py -3 -m ruff check backend migrations
+py -3 -m mypy
+py -3 -m pytest
 ```
 
-Notes:
-
-- Host Postgres port is `15432` to avoid clashes with other local databases.
-- Redis is published on `6379`.
+16 tests passing (Phase 1 + Phase 2).
